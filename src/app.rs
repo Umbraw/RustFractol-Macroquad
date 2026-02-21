@@ -107,18 +107,37 @@ impl App {
         );
 
         // HUD
-        draw_rectangle(10.0, 10.0, 760.0, 92.0, Color::new(0.0, 0.0, 0.0, 0.55));
-        draw_text("Step 2: Mandelbrot render (static)", 20.0, 38.0, 26.0, WHITE);
-        draw_text(
-            &format!(
-                "frames: {} | render: {}x{} | iter: {} | scale: {:.6}\nWheel: zoom | LMB drag: pan | Up/Down: iter | R: reset",
-                self.frames, self.render_w, self.render_h, self.view.max_iter, self.view.scale
-            ),
-            20.0,
-            70.0,
-            20.0,
-            GRAY,
+        let hud_x = 14.0;
+        let hud_y = 14.0;
+        let hud_w = 520.0;
+        let hud_h = 86.0;
+
+        draw_hud_card(hud_x, hud_y, hud_w, hud_h);
+
+        let title_size = 22.0;
+        draw_text("Fractol - Mandelbrot", hud_x + 12.0, hud_y + 28.0, title_size, WHITE);
+
+        draw_line(
+            hud_x + 12.0,
+            hud_y + 36.0,
+            hud_x + hud_w - 12.0,
+            hud_y + 36.0,
+            1.0,
+            Color::new(1.0, 1.0, 1.0, 0.10),
         );
+
+        let text_size = 18.0;
+        let line1 = format!(
+            "res {}x{}  -  iter {}  -  scale {}",
+            self.render_w,
+            self.render_h,
+            self.view.max_iter,
+            fmt_f32(self.view.scale, 6),
+        );
+        draw_text(&line1, hud_x + 12.0, hud_y + 58.0, text_size, GRAY);
+
+        let line2 = "Wheel: zoom  -  LMB drag: pan  -  up/down: iterations  -  R: reset";
+        draw_text(line2, hud_x + 12.0, hud_y + 78.0, 16.0, Color::new(1.0, 1.0, 1.0, 0.70));
     }
 }
 
@@ -150,6 +169,15 @@ fn pan_with_mouse(view: &mut View, delta: Vec2) {
     let dy = -delta.y / sh * view.scale;
 
     view.center += vec2(dx, dy);
+}
+
+fn draw_hud_card(x: f32, y: f32, w: f32, h: f32) {
+    draw_rectangle(x, y, w, h, Color::new(0.0, 0.0, 0.0, 0.60));
+    draw_rectangle_lines(x, y, w, h, 1.0, Color::new(1.0, 1.0, 1.0, 0.12));
+}
+
+fn fmt_f32(v: f32, digits: usize) -> String {
+    format!("{:.*}", digits, v)
 }
 
 fn render_mandelbrot(w: u16, h: u16, view: View) -> Image {
