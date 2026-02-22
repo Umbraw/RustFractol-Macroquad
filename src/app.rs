@@ -21,8 +21,8 @@ pub struct App {
 
 impl App {
     pub fn new() -> Self {
-        let render_w: u16 = 480;
-        let render_h: u16 = 270;
+        let render_w: u16 = 960;
+        let render_h: u16 = 540;
 
         let view = View {
             center: vec2(-0.5, 0.0),
@@ -32,7 +32,7 @@ impl App {
 
         let image = render_mandelbrot(render_w, render_h, view);
         let tex = Texture2D::from_image(&image);
-        tex.set_filter(FilterMode::Nearest);
+        tex.set_filter(FilterMode::Linear);
 
         Self {
             frames: 0,
@@ -84,7 +84,7 @@ impl App {
         if self.dirty {
             let image = render_mandelbrot(self.render_w, self.render_h, self.view);
             self.tex = Texture2D::from_image(&image);
-            self.tex.set_filter(FilterMode::Nearest);
+            self.tex.set_filter(FilterMode::Linear);
             self.dirty = false;
         }
     }
