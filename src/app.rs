@@ -38,6 +38,7 @@ struct RenderJob {
     pass_stage: usize,
     pass_offset_idx: usize,
     x_coords: Vec<f64>,
+    ref_orbit: Option<fractal::mandelbrot::PerturbationRef>,
     sh: f64,
 }
 
@@ -61,6 +62,17 @@ impl RenderJob {
             x_coords.push(view.center.0 + nx * view.scale * aspect);
         }
 
+        let ref_orbit = if view.scale < 1e-6 {
+            let bits = fractal::mandelbrot::precision_bits_for_scale(view.scale);
+            Some(fractal::mandelbrot::build_reference(
+                view.center,
+                view.max_iter,
+                bits,
+            ))
+        } else {
+            None
+        };
+
         Self {
             w,
             h,
@@ -71,6 +83,7 @@ impl RenderJob {
             pass_stage: 0,
             pass_offset_idx: 0,
             x_coords,
+            ref_orbit,
             sh,
         }
     }
@@ -82,6 +95,8 @@ impl RenderJob {
         let scale = self.view.scale;
         let sh = self.sh;
         let x_coords = &self.x_coords;
+        let center = self.view.center;
+        let ref_orbit = self.ref_orbit.as_ref();
 
         let row_bytes: Vec<(u16, Vec<u8>)> = rows
             .par_iter()
@@ -91,7 +106,12 @@ impl RenderJob {
                 let mut buf = vec![0u8; w * 4];
                 for x in 0..w {
                     let re = x_coords[x];
-                    let it = fractal::mandelbrot::mandelbrot_iter((re, im), max_iter);
+                    let it = if let Some(pref) = ref_orbit {
+                        let dc = (re - center.0, im - center.1);
+                        fractal::mandelbrot::perturbation_iter(dc, pref, max_iter)
+                    } else {
+                        fractal::mandelbrot::mandelbrot_iter((re, im), max_iter)
+                    };
                     let col = fractal::mandelbrot::iter_to_color(it, max_iter);
                     let rgba = color_to_rgba8(col);
                     let idx = x * 4;
