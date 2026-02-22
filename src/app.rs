@@ -5,8 +5,8 @@ use crate::fractal;
 
 #[derive(Clone, Copy)]
 struct View {
-    center: Vec2,
-    scale: f32,
+    center: (f64, f64),
+    scale: f64,
     max_iter: u32,
 }
 
@@ -37,8 +37,8 @@ struct RenderJob {
     next_row: u16,
     pass_stage: usize,
     pass_offset_idx: usize,
-    x_coords: Vec<f32>,
-    sh: f32,
+    x_coords: Vec<f64>,
+    sh: f64,
 }
 
 impl RenderJob {
@@ -51,14 +51,14 @@ impl RenderJob {
     }
 
     fn new(w: u16, h: u16, view: View, image: Image) -> Self {
-        let sw = w as f32;
-        let sh = h as f32;
+        let sw = w as f64;
+        let sh = h as f64;
         let aspect = sw / sh;
 
         let mut x_coords = Vec::with_capacity(w as usize);
         for x in 0..w {
-            let nx = (x as f32 + 0.5) / sw - 0.5;
-            x_coords.push(view.center.x + nx * view.scale * aspect);
+            let nx = (x as f64 + 0.5) / sw - 0.5;
+            x_coords.push(view.center.0 + nx * view.scale * aspect);
         }
 
         Self {
@@ -78,7 +78,7 @@ impl RenderJob {
     fn render_rows_parallel(&mut self, rows: &[u16]) {
         let w = self.w as usize;
         let max_iter = self.view.max_iter;
-        let center_y = self.view.center.y;
+        let center_y = self.view.center.1;
         let scale = self.view.scale;
         let sh = self.sh;
         let x_coords = &self.x_coords;
@@ -86,13 +86,12 @@ impl RenderJob {
         let row_bytes: Vec<(u16, Vec<u8>)> = rows
             .par_iter()
             .map(|&y| {
-                let ny = (y as f32 + 0.5) / sh - 0.5;
+                let ny = (y as f64 + 0.5) / sh - 0.5;
                 let im = center_y + ny * scale;
                 let mut buf = vec![0u8; w * 4];
                 for x in 0..w {
                     let re = x_coords[x];
-                    let c = vec2(re, im);
-                    let it = fractal::mandelbrot::mandelbrot_iter(c, max_iter);
+                    let it = fractal::mandelbrot::mandelbrot_iter((re, im), max_iter);
                     let col = fractal::mandelbrot::iter_to_color(it, max_iter);
                     let rgba = color_to_rgba8(col);
                     let idx = x * 4;
@@ -192,7 +191,7 @@ impl App {
         let render_h = preview_h;
 
         let view = View {
-            center: vec2(-0.5, 0.0),
+            center: (-0.5, 0.0),
             scale: 3.0,
             max_iter: 200,
         };
@@ -269,7 +268,7 @@ impl App {
 
         if is_key_pressed(KeyCode::R) {
             self.view = View {
-                center: vec2(-0.5, 0.0),
+                center: (-0.5, 0.0),
                 scale: 3.0,
                 max_iter: 200,
             };
@@ -403,13 +402,13 @@ impl App {
     }
 }
 
-fn screen_to_complex(p: Vec2, view: View, screen_w: f32, screen_h: f32) -> Vec2 {
-    let aspect = screen_w / screen_h;
+fn screen_to_complex(p: Vec2, view: View, screen_w: f32, screen_h: f32) -> (f64, f64) {
+    let aspect = screen_w as f64 / screen_h as f64;
 
-    let x = (p.x / screen_w - 0.5) * view.scale * aspect;
-    let y = (p.y / screen_h - 0.5) * view.scale;
+    let x = (p.x as f64 / screen_w as f64 - 0.5) * view.scale * aspect;
+    let y = (p.y as f64 / screen_h as f64 - 0.5) * view.scale;
 
-    view.center + vec2(x, y)
+    (view.center.0 + x, view.center.1 + y)
 }
 
 fn zoom_at_mouse(view: &mut View, zoom_factor: f32) {
@@ -417,20 +416,22 @@ fn zoom_at_mouse(view: &mut View, zoom_factor: f32) {
     let mouse = vec2(mouse_position().0, mouse_position().1);
 
     let before = screen_to_complex(mouse, *view, sw, sh);
-    view.scale *= zoom_factor;
+    view.scale *= zoom_factor as f64;
     let after = screen_to_complex(mouse, *view, sw, sh);
 
-    view.center += before - after;
+    view.center.0 += before.0 - after.0;
+    view.center.1 += before.1 - after.1;
 }
 
 fn pan_with_mouse(view: &mut View, delta: Vec2) {
     let (sw, sh) = (screen_width(), screen_height());
-    let aspect = sw / sh;
+    let aspect = sw as f64 / sh as f64;
 
-    let dx = -delta.x / sw * view.scale * aspect;
-    let dy = -delta.y / sh * view.scale;
+    let dx = -(delta.x as f64) / sw as f64 * view.scale * aspect;
+    let dy = -(delta.y as f64) / sh as f64 * view.scale;
 
-    view.center += vec2(dx, dy);
+    view.center.0 += dx;
+    view.center.1 += dy;
 }
 
 fn draw_hud_card(x: f32, y: f32, w: f32, h: f32) {
@@ -438,7 +439,7 @@ fn draw_hud_card(x: f32, y: f32, w: f32, h: f32) {
     draw_rectangle_lines(x, y, w, h, 1.0, Color::new(1.0, 1.0, 1.0, 0.12));
 }
 
-fn fmt_f32(v: f32, digits: usize) -> String {
+fn fmt_f32(v: f64, digits: usize) -> String {
     format!("{:.*}", digits, v)
 }
 

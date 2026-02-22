@@ -20,14 +20,14 @@ fn hsv_to_rgb(h: f32, s: f32, v: f32) -> (f32, f32, f32) {
     (r + m, g + m, b + m)
 }
 
-pub fn mandelbrot_iter(c: Vec2, max_iter: u32) -> u32 {
-    let mut z = vec2(0.0, 0.0);
+pub fn mandelbrot_iter(c: (f64, f64), max_iter: u32) -> u32 {
+    let mut z = (0.0_f64, 0.0_f64);
     let mut i = 0;
 
     while i < max_iter {
         // (a=bi)^2 = (a^2 - b^2) + (2ab)i
-        let a = z.x;
-        let b = z.y;
+        let a = z.0;
+        let b = z.1;
         let aa = a * a;
         let bb = b * b;
 
@@ -35,7 +35,7 @@ pub fn mandelbrot_iter(c: Vec2, max_iter: u32) -> u32 {
             break;
         }
 
-        z = vec2(aa - bb + c.x, 2.0 * a * b + c.y);
+        z = (aa - bb + c.0, 2.0 * a * b + c.1);
         i += 1;
     }
 
