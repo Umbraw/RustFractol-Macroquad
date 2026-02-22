@@ -5,6 +5,10 @@ Goal: smooth interaction, progressive rendering, and enough precision to zoom ve
 
 This project started from a simple need: navigate a fractal **without stutter**, with a progressive render that stays readable while moving.
 
+## Why Macroquad?
+
+I picked macroquad because it stays out of the way. It opens a window, handles inputs, and draws textures without the overhead of a big engine or a long setup. That makes it easy to experiment and keep the project playful, while still delivering a responsive, fullscreen‑friendly experience.
+
 ## What you can do
 
 - Zoom and pan in real time
@@ -55,4 +59,3 @@ sudo dnf install m4 gmp-devel mpfr-devel
 
 Even with `f64`, you eventually hit a precision limit.  
 Perturbation-based deep zoom lets you go **much further** while keeping good performance.
-
