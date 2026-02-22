@@ -17,12 +17,24 @@ pub struct App {
     view: View,
     dirty: bool,
     last_mouse: Vec2,
+
+    preview_w: u16,
+    preview_h: u16,
+    hq_w: u16,
+    hq_h: u16,
+    idle_frames: u32,
 }
 
 impl App {
     pub fn new() -> Self {
-        let render_w: u16 = 960;
-        let render_h: u16 = 540;
+        let preview_w: u16 = 480;
+        let preview_h: u16 = 270;
+        let hq_w: u16 = 1280;
+        let hq_h: u16 = 720;
+
+        // Start in preview for responsiveness
+        let render_w = preview_w;
+        let render_h = preview_h;
 
         let view = View {
             center: vec2(-0.5, 0.0),
@@ -42,11 +54,19 @@ impl App {
             view,
             dirty: false,
             last_mouse: vec2(0.0, 0.0),
+
+            preview_w,
+            preview_h,
+            hq_w,
+            hq_h,
+            idle_frames: 0,
         }
     }
 
     pub fn update(&mut self) {
+        let mut moved = false;
         self.frames += 1;
+
         let mouse = vec2(mouse_position().0, mouse_position().1);
         let mouse_delta = mouse - self.last_mouse;
         self.last_mouse = mouse;
@@ -55,21 +75,21 @@ impl App {
         if wy.abs() > 0.0 {
             let factor = if wy > 0.0 { 0.85 } else { 1.0 / 0.85 };
             zoom_at_mouse(&mut self.view, factor);
-            self.dirty = true;
+            moved = true;
         }
 
         if is_mouse_button_down(MouseButton::Left) {
             pan_with_mouse(&mut self.view, mouse_delta);
-            self.dirty = true;
+            moved = true;
         }
 
         if is_key_pressed(KeyCode::Up) {
             self.view.max_iter = (self.view.max_iter + 50).min(10_000);
-            self.dirty = true;
+            moved = true;
         }
         if is_key_pressed(KeyCode::Down) {
             self.view.max_iter = self.view.max_iter.saturating_sub(50).max(50);
-            self.dirty = true;
+            moved = true;
         }
 
         if is_key_pressed(KeyCode::R) {
@@ -78,9 +98,34 @@ impl App {
                 scale: 3.0,
                 max_iter: 200,
             };
-            self.dirty = true;
+            moved = true;
         }
 
+        // --- Preview while moving, HQ after short idle ---
+        if moved {
+            self.idle_frames = 0;
+            self.dirty = true;
+
+            // If we were in HQ, drop back to preview to stay responsive
+            if self.render_w != self.preview_w || self.render_h != self.preview_h {
+                self.render_w = self.preview_w;
+                self.render_h = self.preview_h;
+            }
+        } else {
+            self.idle_frames += 1;
+        }
+
+        // Switch to HQ once after ~200ms of inactivity
+        let idle_threshold: u32 = 12; // ~12 frames @ 60fps ≈ 200ms
+        if !moved && self.idle_frames == idle_threshold {
+            if self.render_w != self.hq_w || self.render_h != self.hq_h {
+                self.render_w = self.hq_w;
+                self.render_h = self.hq_h;
+                self.dirty = true;
+            }
+        }
+
+        // Render AFTER resolution decision
         if self.dirty {
             let image = render_mandelbrot(self.render_w, self.render_h, self.view);
             self.tex = Texture2D::from_image(&image);
@@ -136,8 +181,14 @@ impl App {
         );
         draw_text(&line1, hud_x + 12.0, hud_y + 58.0, text_size, GRAY);
 
-        let line2 = "Wheel: zoom  -  LMB drag: pan  -  up/down: iterations  -  R: reset";
-        draw_text(line2, hud_x + 12.0, hud_y + 78.0, 16.0, Color::new(1.0, 1.0, 1.0, 0.70));
+        let line2 = "Wheel: zoom  -  LMB drag: pan  -  Up/Down: iterations  -  R: reset";
+        draw_text(
+            line2,
+            hud_x + 12.0,
+            hud_y + 78.0,
+            16.0,
+            Color::new(1.0, 1.0, 1.0, 0.70),
+        );
     }
 }
 
