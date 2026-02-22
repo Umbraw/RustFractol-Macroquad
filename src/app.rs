@@ -261,6 +261,34 @@ impl App {
         let mut moved = false;
         self.frames += 1;
 
+        // Keep render resolution in sync with window size (for crisp full-screen output)
+        let sw = screen_width().round().max(1.0) as u16;
+        let sh = screen_height().round().max(1.0) as u16;
+        if sw != self.hq_w || sh != self.hq_h {
+            self.hq_w = sw;
+            self.hq_h = sh;
+            if !self.is_preview() && (self.render_w != sw || self.render_h != sh) {
+                self.render_w = sw;
+                self.render_h = sh;
+                self.dirty = true;
+                self.render_job = None;
+            }
+        }
+
+        let preview_scale = 0.35_f32;
+        let pw = (screen_width() * preview_scale).round().max(200.0) as u16;
+        let ph = (screen_height() * preview_scale).round().max(112.0) as u16;
+        if pw != self.preview_w || ph != self.preview_h {
+            self.preview_w = pw;
+            self.preview_h = ph;
+            if self.is_preview() && (self.render_w != pw || self.render_h != ph) {
+                self.render_w = pw;
+                self.render_h = ph;
+                self.dirty = true;
+                self.render_job = None;
+            }
+        }
+
         let mouse = vec2(mouse_position().0, mouse_position().1);
         let mouse_delta = mouse - self.last_mouse;
         self.last_mouse = mouse;
