@@ -339,7 +339,7 @@ impl App {
         }
 
         // Switch to HQ once after ~100ms of inactivity
-        let idle_threshold: u32 = 6; // ~6 frames @ 60fps ≈ 100ms
+        let idle_threshold: u32 = 6; // ~6 frames @ 60fps ~ 100ms
         if !moved && self.idle_frames == idle_threshold {
             if self.render_w != self.hq_w || self.render_h != self.hq_h {
                 self.render_w = self.hq_w;
@@ -399,42 +399,75 @@ impl App {
         );
 
         // HUD
-        let hud_x = 14.0;
-        let hud_y = 14.0;
-        let hud_w = 520.0;
-        let hud_h = 86.0;
-
+        let hud_x = 16.0;
+        let hud_y = 16.0;
+        let hud_w = 360.0;
+        let hud_h = 104.0;
         draw_hud_card(hud_x, hud_y, hud_w, hud_h);
 
-        let title_size = 22.0;
-        draw_text("Fractol - Mandelbrot", hud_x + 12.0, hud_y + 28.0, title_size, WHITE);
+        let title_size = 24.0;
+        draw_text_shadow(
+            "Fractol - Mandelbrot",
+            hud_x + 14.0,
+            hud_y + 30.0,
+            title_size,
+            WHITE,
+        );
 
         draw_line(
-            hud_x + 12.0,
-            hud_y + 36.0,
-            hud_x + hud_w - 12.0,
-            hud_y + 36.0,
+            hud_x + 14.0,
+            hud_y + 38.0,
+            hud_x + hud_w - 14.0,
+            hud_y + 38.0,
             1.0,
-            Color::new(1.0, 1.0, 1.0, 0.10),
+            Color::new(1.0, 1.0, 1.0, 0.12),
         );
 
-        let text_size = 18.0;
+        let zoom = 3.0_f64 / self.view.scale.max(1e-300);
         let line1 = format!(
-            "res {}x{}  -  iter {}  -  scale {}",
-            self.render_w,
-            self.render_h,
-            self.view.max_iter,
-            fmt_f32(self.view.scale, 6),
+            "Zoom x{}   Iter {}",
+            fmt_zoom(zoom),
+            self.view.max_iter
         );
-        draw_text(&line1, hud_x + 12.0, hud_y + 58.0, text_size, GRAY);
+        draw_text(&line1, hud_x + 14.0, hud_y + 64.0, 18.0, GRAY);
 
-        let line2 = "Wheel: zoom  -  LMB drag: pan  -  Up/Down: iterations  -  R: reset";
+        let line2 = format!(
+            "Center  {:.6}, {:.6}",
+            self.view.center.0,
+            self.view.center.1
+        );
+        draw_text(&line2, hud_x + 14.0, hud_y + 86.0, 16.0, Color::new(1.0, 1.0, 1.0, 0.75));
+
+        let hint = "Wheel: zoom   LMB drag: pan   Up/Down: iterations   R: reset";
         draw_text(
-            line2,
-            hud_x + 12.0,
-            hud_y + 78.0,
+            hint,
             16.0,
-            Color::new(1.0, 1.0, 1.0, 0.70),
+            sh - 18.0,
+            16.0,
+            Color::new(1.0, 1.0, 1.0, 0.65),
+        );
+
+        // Status pill
+        let mode = if self.is_preview() { "PREVIEW" } else { "HQ" };
+        let pill_w = 96.0;
+        let pill_h = 26.0;
+        let pill_x = sw - pill_w - 16.0;
+        let pill_y = 16.0;
+        draw_rectangle(pill_x, pill_y, pill_w, pill_h, Color::new(0.0, 0.0, 0.0, 0.55));
+        draw_rectangle_lines(
+            pill_x,
+            pill_y,
+            pill_w,
+            pill_h,
+            1.0,
+            Color::new(1.0, 1.0, 1.0, 0.15),
+        );
+        draw_text(
+            mode,
+            pill_x + 12.0,
+            pill_y + 18.0,
+            16.0,
+            Color::new(1.0, 1.0, 1.0, 0.85),
         );
     }
 
@@ -489,6 +522,21 @@ fn draw_hud_card(x: f32, y: f32, w: f32, h: f32) {
 
 fn fmt_f32(v: f64, digits: usize) -> String {
     format!("{:.*}", digits, v)
+}
+
+fn fmt_zoom(v: f64) -> String {
+    if v >= 1e6 {
+        format!("{:.2e}", v)
+    } else if v >= 10.0 {
+        format!("{:.1}", v)
+    } else {
+        format!("{:.2}", v)
+    }
+}
+
+fn draw_text_shadow(text: &str, x: f32, y: f32, size: f32, color: Color) {
+    draw_text(text, x + 1.0, y + 1.0, size, Color::new(0.0, 0.0, 0.0, 0.6));
+    draw_text(text, x, y, size, color);
 }
 
 fn preview_max_iter(max_iter: u32) -> u32 {
