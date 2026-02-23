@@ -1,5 +1,7 @@
 use macroquad::prelude::*;
 use rayon::prelude::*;
+use std::fs;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::fractal;
 
@@ -19,6 +21,7 @@ pub struct App {
     dirty: bool,
     render_job: Option<RenderJob>,
     last_mouse: Vec2,
+    screenshot_requested: bool,
 
     preview_w: u16,
     preview_h: u16,
@@ -229,6 +232,7 @@ impl App {
             dirty: true,
             render_job: None,
             last_mouse: vec2(0.0, 0.0),
+            screenshot_requested: false,
 
             preview_w,
             preview_h,
@@ -323,6 +327,10 @@ impl App {
             moved = true;
         }
 
+        if is_key_pressed(KeyCode::S) {
+            self.screenshot_requested = true;
+        }
+
         // --- Preview while moving, HQ after short idle ---
         if moved {
             self.idle_frames = 0;
@@ -381,7 +389,7 @@ impl App {
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&mut self) {
         clear_background(BLACK);
 
         let sw = screen_width();
@@ -398,11 +406,19 @@ impl App {
             },
         );
 
+        // If a screenshot is requested, capture only the fractal (no UI).
+        if self.screenshot_requested {
+            let img = get_screen_data();
+            save_screenshot_image(&img);
+            self.screenshot_requested = false;
+            return;
+        }
+
         // HUD
         let hud_x = 16.0;
         let hud_y = 16.0;
         let hud_w = 360.0;
-        let hud_h = 104.0;
+        let hud_h = 124.0;
         draw_hud_card(hud_x, hud_y, hud_w, hud_h);
 
         let title_size = 24.0;
@@ -438,7 +454,10 @@ impl App {
         );
         draw_text(&line2, hud_x + 14.0, hud_y + 86.0, 16.0, Color::new(1.0, 1.0, 1.0, 0.75));
 
-        let hint = "Wheel: zoom   LMB drag: pan   Up/Down: iterations   R: reset";
+        let line3 = "S: screenshot (no UI)";
+        draw_text(&line3, hud_x + 14.0, hud_y + 104.0, 14.0, Color::new(1.0, 1.0, 1.0, 0.60));
+
+        let hint = "Wheel: zoom   LMB drag: pan   Up/Down: iterations   R: reset   S: screenshot";
         draw_text(
             hint,
             16.0,
@@ -469,6 +488,12 @@ impl App {
             16.0,
             Color::new(1.0, 1.0, 1.0, 0.85),
         );
+
+        if self.screenshot_requested {
+            let img = get_screen_data();
+            save_screenshot_image(&img);
+            self.screenshot_requested = false;
+        }
     }
 
     fn effective_view(&self, is_preview: bool) -> View {
@@ -537,6 +562,20 @@ fn fmt_zoom(v: f64) -> String {
 fn draw_text_shadow(text: &str, x: f32, y: f32, size: f32, color: Color) {
     draw_text(text, x + 1.0, y + 1.0, size, Color::new(0.0, 0.0, 0.0, 0.6));
     draw_text(text, x, y, size, color);
+}
+
+fn save_screenshot_image(img: &Image) {
+    let dir = "screenshots";
+    if fs::create_dir_all(dir).is_err() {
+        return;
+    }
+
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let path = format!("{}/shot_{}.png", dir, ts);
+    img.export_png(&path);
 }
 
 fn preview_max_iter(max_iter: u32) -> u32 {

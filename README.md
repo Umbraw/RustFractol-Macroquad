@@ -15,6 +15,7 @@ I picked macroquad because it stays out of the way. It opens a window, handles i
 - Increase/decrease iterations to reveal more detail
 - Enjoy progressive rendering (fast preview, HQ when idle)
 - Go much deeper with **perturbation-based deep zoom**
+- Save clean screenshots to `screenshots/`
 
 ## Controls
 
@@ -22,6 +23,7 @@ I picked macroquad because it stays out of the way. It opens a window, handles i
 - `Left click + drag`: pan
 - `Up/Down arrows`: increase / decrease iterations
 - `R`: reset
+- `S`: take a clean screenshot (fractal only, no UI)
 
 ## Run it
 
