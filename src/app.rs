@@ -23,6 +23,7 @@ pub struct App {
     render_job: Option<RenderJob>,
     last_mouse: Vec2,
     screenshot_requested: bool,
+    palette_select_mode: bool,
 
     preview_w: u16,
     preview_h: u16,
@@ -238,6 +239,7 @@ impl App {
             render_job: None,
             last_mouse: vec2(0.0, 0.0),
             screenshot_requested: false,
+            palette_select_mode: false,
 
             preview_w,
             preview_h,
@@ -339,9 +341,27 @@ impl App {
         }
 
         if is_key_pressed(KeyCode::P) {
-            self.palette = self.palette.wrapping_add(1);
-            self.dirty = true;
-            self.render_job = None;
+            self.palette_select_mode = true;
+        }
+
+        if self.palette_select_mode {
+            let mut selected: Option<u8> = None;
+            if is_key_pressed(KeyCode::Key1) {
+                selected = Some(0);
+            } else if is_key_pressed(KeyCode::Key2) {
+                selected = Some(1);
+            } else if is_key_pressed(KeyCode::Key3) {
+                selected = Some(2);
+            } else if is_key_pressed(KeyCode::Escape) {
+                self.palette_select_mode = false;
+            }
+
+            if let Some(p) = selected {
+                self.palette = p;
+                self.dirty = true;
+                self.render_job = None;
+                self.palette_select_mode = false;
+            }
         }
 
         if is_key_pressed(KeyCode::S) {
@@ -482,6 +502,17 @@ impl App {
             16.0,
             Color::new(1.0, 1.0, 1.0, 0.65),
         );
+
+        if self.palette_select_mode {
+            let msg = "Select palette: 1 / 2 / 3   (Esc to cancel)";
+            draw_text(
+                msg,
+                16.0,
+                sh - 40.0,
+                16.0,
+                Color::new(1.0, 1.0, 1.0, 0.85),
+            );
+        }
 
         // Status pill
         let mode = if self.is_preview() { "PREVIEW" } else { "HQ" };
