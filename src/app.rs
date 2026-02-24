@@ -352,6 +352,12 @@ impl App {
                 selected = Some(1);
             } else if is_key_pressed(KeyCode::Key3) {
                 selected = Some(2);
+            } else if is_key_pressed(KeyCode::Key4) {
+                selected = Some(3);
+            } else if is_key_pressed(KeyCode::Key5) {
+                selected = Some(4);
+            } else if is_key_pressed(KeyCode::Key6) {
+                selected = Some(5);
             } else if is_key_pressed(KeyCode::Escape) {
                 self.palette_select_mode = false;
             }
@@ -504,7 +510,7 @@ impl App {
         );
 
         if self.palette_select_mode {
-            let msg = "Select palette: 1 / 2 / 3   (Esc to cancel)";
+            let msg = "Select palette: 1 / 2 / 3 / 4 / 5 / 6   (Esc to cancel)";
             draw_text(
                 msg,
                 16.0,

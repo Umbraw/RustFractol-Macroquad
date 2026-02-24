@@ -139,7 +139,7 @@ pub fn iter_to_color(iter: u32, max_iter: u32, palette: u8) -> Color {
     }
 
     let t = iter as f32 / max_iter as f32;
-    match palette % 3 {
+    match palette % 6 {
         0 => {
             let hue = (360.0 * (0.85 + 2.0 * t)) % 360.0;
             let (r, g, b) = hsv_to_rgb(hue, 0.85, 1.0);
@@ -150,9 +150,24 @@ pub fn iter_to_color(iter: u32, max_iter: u32, palette: u8) -> Color {
             let (r, g, b) = hsv_to_rgb(hue, 0.75, 0.95);
             Color::new(r, g, b, 1.0)
         }
-        _ => {
+        2 => {
             let hue = (360.0 * (0.55 + 3.2 * t)) % 360.0;
             let (r, g, b) = hsv_to_rgb(hue, 0.90, 0.90);
+            Color::new(r, g, b, 1.0)
+        }
+        3 => {
+            let hue = (360.0 * (0.05 + 0.8 * t)) % 360.0;
+            let (r, g, b) = hsv_to_rgb(hue, 0.95, 0.85);
+            Color::new(r, g, b, 1.0)
+        }
+        4 => {
+            let hue = (360.0 * (0.70 + 1.6 * t)) % 360.0;
+            let (r, g, b) = hsv_to_rgb(hue, 0.65, 1.0);
+            Color::new(r, g, b, 1.0)
+        }
+        _ => {
+            let hue = (360.0 * (0.33 + 4.0 * t)) % 360.0;
+            let (r, g, b) = hsv_to_rgb(hue, 0.80, 0.95);
             Color::new(r, g, b, 1.0)
         }
     }
