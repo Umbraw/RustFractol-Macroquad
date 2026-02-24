@@ -18,6 +18,7 @@ pub struct App {
     render_w: u16,
     render_h: u16,
     view: View,
+    palette: u8,
     dirty: bool,
     render_job: Option<RenderJob>,
     last_mouse: Vec2,
@@ -35,6 +36,7 @@ struct RenderJob {
     w: u16,
     h: u16,
     view: View,
+    palette: u8,
     image: Image,
     upload_image: Image,
     next_row: u16,
@@ -54,7 +56,7 @@ impl RenderJob {
         ]
     }
 
-    fn new(w: u16, h: u16, view: View, image: Image) -> Self {
+    fn new(w: u16, h: u16, view: View, palette: u8, image: Image) -> Self {
         let sw = w as f64;
         let sh = h as f64;
         let aspect = sw / sh;
@@ -80,6 +82,7 @@ impl RenderJob {
             w,
             h,
             view,
+            palette,
             image,
             upload_image: Image::empty(),
             next_row: 0,
@@ -100,6 +103,7 @@ impl RenderJob {
         let x_coords = &self.x_coords;
         let center = self.view.center;
         let ref_orbit = self.ref_orbit.as_ref();
+        let palette = self.palette;
 
         let row_bytes: Vec<(u16, Vec<u8>)> = rows
             .par_iter()
@@ -115,7 +119,7 @@ impl RenderJob {
                     } else {
                         fractal::mandelbrot::mandelbrot_iter((re, im), max_iter)
                     };
-                    let col = fractal::mandelbrot::iter_to_color(it, max_iter);
+                    let col = fractal::mandelbrot::iter_to_color(it, max_iter, palette);
                     let rgba = color_to_rgba8(col);
                     let idx = x * 4;
                     buf[idx] = rgba[0];
@@ -229,6 +233,7 @@ impl App {
             render_w,
             render_h,
             view,
+            palette: 0,
             dirty: true,
             render_job: None,
             last_mouse: vec2(0.0, 0.0),
@@ -258,7 +263,13 @@ impl App {
 
         let image = Image::gen_image_color(self.render_w, self.render_h, BLACK);
         let job_view = self.effective_view(self.is_preview());
-        self.render_job = Some(RenderJob::new(self.render_w, self.render_h, job_view, image));
+        self.render_job = Some(RenderJob::new(
+            self.render_w,
+            self.render_h,
+            job_view,
+            self.palette,
+            image,
+        ));
     }
 
     pub fn update(&mut self) {
@@ -325,6 +336,12 @@ impl App {
                 max_iter: 200,
             };
             moved = true;
+        }
+
+        if is_key_pressed(KeyCode::P) {
+            self.palette = self.palette.wrapping_add(1);
+            self.dirty = true;
+            self.render_job = None;
         }
 
         if is_key_pressed(KeyCode::S) {
@@ -457,7 +474,7 @@ impl App {
         let line3 = "S: screenshot (no UI)";
         draw_text(&line3, hud_x + 14.0, hud_y + 104.0, 14.0, Color::new(1.0, 1.0, 1.0, 0.60));
 
-        let hint = "Wheel: zoom   LMB drag: pan   Up/Down: iterations   R: reset   S: screenshot";
+        let hint = "Wheel: zoom   LMB drag: pan   Up/Down: iterations   R: reset   P: palette   S: screenshot";
         draw_text(
             hint,
             16.0,
@@ -543,10 +560,6 @@ fn pan_with_mouse(view: &mut View, delta: Vec2) {
 fn draw_hud_card(x: f32, y: f32, w: f32, h: f32) {
     draw_rectangle(x, y, w, h, Color::new(0.0, 0.0, 0.0, 0.60));
     draw_rectangle_lines(x, y, w, h, 1.0, Color::new(1.0, 1.0, 1.0, 0.12));
-}
-
-fn fmt_f32(v: f64, digits: usize) -> String {
-    format!("{:.*}", digits, v)
 }
 
 fn fmt_zoom(v: f64) -> String {

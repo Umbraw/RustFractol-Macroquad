@@ -133,16 +133,27 @@ pub fn perturbation_iter(dc: (f64, f64), pref: &PerturbationRef, max_iter: u32) 
     max_iter
 }
 
-pub fn iter_to_color(iter: u32, max_iter: u32) -> Color {
+pub fn iter_to_color(iter: u32, max_iter: u32, palette: u8) -> Color {
     if iter >= max_iter {
         return BLACK;
     }
 
     let t = iter as f32 / max_iter as f32;
-    let hue = (360.0 * (0.85 + 2.0 * t)) % 360.0;
-    let sat = 0.85;
-    let val = 1.0;
-
-    let (r, g, b) = hsv_to_rgb(hue, sat, val);
-    Color::new(r, g, b, 1.0)
+    match palette % 3 {
+        0 => {
+            let hue = (360.0 * (0.85 + 2.0 * t)) % 360.0;
+            let (r, g, b) = hsv_to_rgb(hue, 0.85, 1.0);
+            Color::new(r, g, b, 1.0)
+        }
+        1 => {
+            let hue = (360.0 * (0.20 + 1.2 * t)) % 360.0;
+            let (r, g, b) = hsv_to_rgb(hue, 0.75, 0.95);
+            Color::new(r, g, b, 1.0)
+        }
+        _ => {
+            let hue = (360.0 * (0.55 + 3.2 * t)) % 360.0;
+            let (r, g, b) = hsv_to_rgb(hue, 0.90, 0.90);
+            Color::new(r, g, b, 1.0)
+        }
+    }
 }
