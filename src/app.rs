@@ -15,6 +15,9 @@ struct View {
 pub struct App {
     frames: u64,
     tex: Texture2D,
+    minimap_tex: Texture2D,
+    minimap_w: u16,
+    minimap_h: u16,
     render_w: u16,
     render_h: u16,
     view: View,
@@ -228,9 +231,23 @@ impl App {
         let tex = Texture2D::from_image(&image);
         tex.set_filter(FilterMode::Linear);
 
+        let minimap_w: u16 = 160;
+        let minimap_h: u16 = 160;
+        let minimap_view = View {
+            center: (-0.5, 0.0),
+            scale: 3.0,
+            max_iter: 200,
+        };
+        let minimap_img = render_mandelbrot_image(minimap_w, minimap_h, minimap_view, 0);
+        let minimap_tex = Texture2D::from_image(&minimap_img);
+        minimap_tex.set_filter(FilterMode::Linear);
+
         Self {
             frames: 0,
             tex,
+            minimap_tex,
+            minimap_w,
+            minimap_h,
             render_w,
             render_h,
             view,
@@ -520,6 +537,15 @@ impl App {
             );
         }
 
+        draw_minimap(
+            &self.minimap_tex,
+            self.minimap_w,
+            self.minimap_h,
+            sw,
+            sh,
+            self.view,
+        );
+
         // Status pill
         let mode = if self.is_preview() { "PREVIEW" } else { "HQ" };
         let pill_w = 96.0;
@@ -543,11 +569,6 @@ impl App {
             Color::new(1.0, 1.0, 1.0, 0.85),
         );
 
-        if self.screenshot_requested {
-            let img = get_screen_data();
-            save_screenshot_image(&img);
-            self.screenshot_requested = false;
-        }
     }
 
     fn effective_view(&self, is_preview: bool) -> View {
@@ -612,6 +633,118 @@ fn fmt_zoom(v: f64) -> String {
 fn draw_text_shadow(text: &str, x: f32, y: f32, size: f32, color: Color) {
     draw_text(text, x + 1.0, y + 1.0, size, Color::new(0.0, 0.0, 0.0, 0.6));
     draw_text(text, x, y, size, color);
+}
+
+fn render_mandelbrot_image(w: u16, h: u16, view: View, palette: u8) -> Image {
+    let mut img = Image::gen_image_color(w, h, BLACK);
+    let sw = w as f64;
+    let sh = h as f64;
+    let aspect = sw / sh;
+
+    for y in 0..h {
+        let ny = (y as f64 + 0.5) / sh - 0.5;
+        let im = view.center.1 + ny * view.scale;
+        for x in 0..w {
+            let nx = (x as f64 + 0.5) / sw - 0.5;
+            let re = view.center.0 + nx * view.scale * aspect;
+            let it = fractal::mandelbrot::mandelbrot_iter((re, im), view.max_iter);
+            let col = fractal::mandelbrot::iter_to_color(it, view.max_iter, palette);
+            img.set_pixel(x as u32, y as u32, col);
+        }
+    }
+
+    img
+}
+
+fn draw_minimap(
+    tex: &Texture2D,
+    mw: u16,
+    mh: u16,
+    sw: f32,
+    sh: f32,
+    view: View,
+) {
+    let pad = 12.0;
+    let mm_w = mw as f32;
+    let mm_h = mh as f32;
+    let x = sw - mm_w - pad;
+    let y = sh - mm_h - pad - 24.0;
+
+    draw_rectangle(
+        x - 6.0,
+        y - 6.0,
+        mm_w + 12.0,
+        mm_h + 12.0,
+        Color::new(0.0, 0.0, 0.0, 0.40),
+    );
+    draw_rectangle_lines(
+        x - 6.0,
+        y - 6.0,
+        mm_w + 12.0,
+        mm_h + 12.0,
+        1.0,
+        Color::new(1.0, 1.0, 1.0, 0.08),
+    );
+
+    draw_texture_ex(
+        tex,
+        x,
+        y,
+        WHITE,
+        DrawTextureParams {
+            dest_size: Some(vec2(mm_w, mm_h)),
+            ..Default::default()
+        },
+    );
+
+    let base_center = (-0.5_f64, 0.0_f64);
+    let base_scale = 3.0_f64;
+    let base_aspect = 1.0_f64;
+    let base_w = base_scale * base_aspect;
+    let base_h = base_scale;
+    let base_left = base_center.0 - base_w * 0.5;
+    let base_top = base_center.1 - base_h * 0.5;
+
+    let screen_aspect = sw as f64 / sh as f64;
+    let view_w = view.scale * screen_aspect;
+    let view_h = view.scale;
+    let view_left = view.center.0 - view_w * 0.5;
+    let view_top = view.center.1 - view_h * 0.5;
+
+    let rx = ((view_left - base_left) / base_w * mm_w as f64) as f32;
+    let ry = ((view_top - base_top) / base_h * mm_h as f64) as f32;
+    let mut rw = (view_w / base_w * mm_w as f64) as f32;
+    let mut rh = (view_h / base_h * mm_h as f64) as f32;
+
+    let mut rx = rx;
+    let mut ry = ry;
+    if rw < 2.0 {
+        rw = 2.0;
+    }
+    if rh < 2.0 {
+        rh = 2.0;
+    }
+    if rw > mm_w {
+        rw = mm_w;
+        rx = 0.0;
+    } else {
+        rx = rx.clamp(0.0, mm_w - rw);
+    }
+    if rh > mm_h {
+        rh = mm_h;
+        ry = 0.0;
+    } else {
+        ry = ry.clamp(0.0, mm_h - rh);
+    }
+
+    draw_rectangle_lines(
+        x + rx,
+        y + ry,
+        rw,
+        rh,
+        2.0,
+        Color::new(1.0, 1.0, 1.0, 0.85),
+    );
 }
 
 fn save_screenshot_image(img: &Image) {
