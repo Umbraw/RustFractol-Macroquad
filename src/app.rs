@@ -544,6 +544,7 @@ impl App {
             sw,
             sh,
             self.view,
+            self.palette,
         );
 
         // Status pill
@@ -663,6 +664,7 @@ fn draw_minimap(
     sw: f32,
     sh: f32,
     view: View,
+    palette: u8,
 ) {
     let pad = 12.0;
     let mm_w = mw as f32;
@@ -737,14 +739,26 @@ fn draw_minimap(
         ry = ry.clamp(0.0, mm_h - rh);
     }
 
+    let frame_color = palette_accent_color(palette);
     draw_rectangle_lines(
         x + rx,
         y + ry,
         rw,
         rh,
         2.0,
-        Color::new(1.0, 1.0, 1.0, 0.85),
+        Color::new(frame_color.r, frame_color.g, frame_color.b, 0.90),
     );
+}
+
+fn palette_accent_color(palette: u8) -> Color {
+    match palette % 6 {
+        0 => Color::new(0.35, 0.80, 1.00, 1.0), // cyan
+        1 => Color::new(1.00, 0.65, 0.30, 1.0), // warm orange
+        2 => Color::new(0.85, 0.55, 1.00, 1.0), // violet
+        3 => Color::new(0.40, 1.00, 0.70, 1.0), // mint
+        4 => Color::new(1.00, 0.85, 0.35, 1.0), // gold
+        _ => Color::new(1.00, 0.45, 0.55, 1.0), // rose
+    }
 }
 
 fn save_screenshot_image(img: &Image) {
