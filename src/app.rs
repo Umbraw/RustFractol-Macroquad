@@ -383,6 +383,7 @@ impl App {
                 self.palette = p;
                 self.dirty = true;
                 self.render_job = None;
+                self.update_minimap();
                 self.palette_select_mode = false;
             }
         }
@@ -581,6 +582,17 @@ impl App {
         } else {
             self.view
         }
+    }
+
+    fn update_minimap(&mut self) {
+        let minimap_view = View {
+            center: (-0.5, 0.0),
+            scale: 3.0,
+            max_iter: 200,
+        };
+        let img = render_mandelbrot_image(self.minimap_w, self.minimap_h, minimap_view, self.palette);
+        self.minimap_tex = Texture2D::from_image(&img);
+        self.minimap_tex.set_filter(FilterMode::Linear);
     }
 }
 
